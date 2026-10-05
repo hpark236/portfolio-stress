@@ -1,0 +1,5 @@
+.venv/
+.cache/
+.vercel
+.DS_Store
+__pycache__/

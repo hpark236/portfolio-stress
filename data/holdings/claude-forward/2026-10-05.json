@@ -1,0 +1,93 @@
+{
+ "name": "Claude forward portfolio (claude-opus-5-5)",
+ "source": "Fixed monthly prompt run through the Claude Code CLI on 2026-10-05, model claude-opus-5-5. Tracked only from this date.",
+ "model": "claude-opus-5-5",
+ "note": "The portfolio is a quality-tilted, lower-volatility version of the S&P 500 built for a better Sharpe ratio. It keeps the core mega-cap AI leaders to limit tracking error and balances them with defensive staples, healthcare, financials and energy to cushion drawdowns over a one-month hold. My knowledge cutoff is June 2026, so I have no prices, earnings results or news from after that date, and these picks do not account for anything that happened between then and 2026-10-05.",
+ "holdings": [
+  {
+   "ticker": "MSFT",
+   "weight": 9.0,
+   "reason": "Large-cap index leader with steady cloud and AI-driven revenue and strong margins, which keeps tracking error against the S&P 500 low."
+  },
+  {
+   "ticker": "NVDA",
+   "weight": 8.0,
+   "reason": "Leading AI accelerator supplier and a major index weight, so holding it avoids a large active bet against the AI capex theme."
+  },
+  {
+   "ticker": "AAPL",
+   "weight": 7.0,
+   "reason": "Large index weight with a strong balance sheet, buybacks and recurring services revenue."
+  },
+  {
+   "ticker": "AMZN",
+   "weight": 7.0,
+   "reason": "AWS and improving retail margins give exposure to both cloud and consumer spending."
+  },
+  {
+   "ticker": "GOOGL",
+   "weight": 7.0,
+   "reason": "Search, YouTube and Google Cloud cash flows support growth at a fair valuation for a mega-cap."
+  },
+  {
+   "ticker": "META",
+   "weight": 5.0,
+   "reason": "A very profitable ad business that funds AI investment, sized moderately because of capex risk."
+  },
+  {
+   "ticker": "AVGO",
+   "weight": 5.0,
+   "reason": "Exposure to custom AI chips and networking, plus diversified software cash flows from VMware."
+  },
+  {
+   "ticker": "JPM",
+   "weight": 6.0,
+   "reason": "Top-quality US bank with a strong capital position, adding financials diversification away from tech."
+  },
+  {
+   "ticker": "BRK-B",
+   "weight": 7.0,
+   "reason": "Low-beta, diversified conglomerate with a large cash reserve that cushions drawdowns."
+  },
+  {
+   "ticker": "V",
+   "weight": 6.0,
+   "reason": "High-margin payments network tied to nominal consumer spending, with low cyclical risk."
+  },
+  {
+   "ticker": "LLY",
+   "weight": 5.0,
+   "reason": "Leader in GLP-1 obesity and diabetes drugs, providing healthcare growth that does not move closely with tech."
+  },
+  {
+   "ticker": "JNJ",
+   "weight": 5.0,
+   "reason": "Defensive healthcare holding with a stable dividend that lowers portfolio volatility."
+  },
+  {
+   "ticker": "COST",
+   "weight": 5.0,
+   "reason": "Membership-driven defensive retailer with consistent same-store sales growth."
+  },
+  {
+   "ticker": "WMT",
+   "weight": 5.0,
+   "reason": "Defensive consumer staple gaining market share, with a growing e-commerce and advertising business."
+  },
+  {
+   "ticker": "PG",
+   "weight": 5.0,
+   "reason": "Low-beta staples company with pricing power that stabilizes returns if markets turn risk-off."
+  },
+  {
+   "ticker": "XOM",
+   "weight": 4.0,
+   "reason": "Energy exposure that hedges against inflation and oil-price shocks while paying a solid dividend."
+  },
+  {
+   "ticker": "HD",
+   "weight": 4.0,
+   "reason": "Quality housing and home-improvement name that would benefit if interest rates fall."
+  }
+ ]
+}

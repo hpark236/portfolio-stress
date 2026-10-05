@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>portfolio-stress</title>
+<meta name="description" content="Tracks copy-trading and AI-picked portfolios, including Nancy Pelosi's disclosed trades and a forward Claude portfolio, and stress-tests them against historical and hypothetical shocks.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+<style>
+  svg text{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;fill:#666}
+  td.sel{background:#f5f8ff}
+  input.shock{width:64px;text-align:right}
+  .legend span{display:inline-block;margin-right:14px}
+  .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<h1>portfolio-stress</h1>
+<p class="desc">Tracks portfolios people copy or hand to AI: Nancy Pelosi's disclosed trades, and a Claude portfolio chosen each month with a fixed prompt. Each one is stress-tested against market crashes, bull markets, a pandemic, the Strait of Hormuz closing or reopening, and war in Ukraine.</p>
+<p class="small muted" id="asof"></p>
+
+<h2>1. Pelosi: what a copier actually gets</h2>
+<div id="pelosi"><p class="muted">Loading…</p></div>
+
+<h2>2. AI portfolios</h2>
+<div id="ai"></div>
+
+<h2>3. Stress tests</h2>
+<p class="desc">Each portfolio's current holdings run through past events and hypothetical shocks. Historical rows use what each holding actually did in that window. Holdings that did not trade yet use the factor model below, and the coverage column shows how much of the portfolio had real prices. Click a row to see each holding.</p>
+<div id="stress"></div>
+<div id="stressDetail"></div>
+
+<h3>Build your own shock</h3>
+<p class="small">Set a move for each factor. Every holding's response is its sensitivity to the factors (from three years of weekly returns) multiplied by these moves.</p>
+<div class="controls" id="presetRow"></div>
+<div id="editor"></div>
+
+<h2>4. One-year range of outcomes</h2>
+<p class="desc">4,000 simulated years made by resampling 20-day blocks of the current holdings' daily returns from the last three years, which keeps fat tails and calm and volatile stretches. The zero-drift version removes the average return of those three years, so it shows risk without assuming the recent gains repeat.</p>
+<div id="mc"></div>
+
+<h2>5. Factor sensitivities</h2>
+<div id="betas"></div>
+
+<h2>Method</h2>
+<ul class="small">
+  <li><b>Pelosi trades</b> come from her periodic transaction reports on the House Clerk's site, parsed from the PDFs. Positions are sized at the midpoint of each reported dollar range. Option purchases are counted as buying the stock for the same dollar amount, which is how copy-trading apps usually handle them. Her real returns on options were more leveraged.</li>
+  <li><b>Trade date vs copier:</b> the first version fills at the close on the day she traded. The copier fills at the close on the first trading day after the report was filed, which is the earliest anyone else could act.</li>
+  <li><b>AI portfolios</b> are only counted from the day the model chose them. Backtesting a model on past dates would let it use what it already knows happened. The prompt is in the repository and does not mention the stress tests.</li>
+  <li><b>Factor model:</b> weekly returns of each holding regressed on US stocks (SPY), semiconductors (SMH), oil (USO), long Treasuries (TLT), gold (GLD), the dollar (UUP), defence (ITA) and bitcoin, with ridge regularisation because SPY and SMH move together.</li>
+  <li><b>Hypothetical shocks</b> are assumptions, not forecasts. Each states its reasoning, and the editor above lets you change them.</li>
+  <li>Prices from Yahoo Finance, adjusted for splits and dividends. Not investment advice. Source: <a href="https://github.com/hpark236/portfolio-stress">github.com/hpark236/portfolio-stress</a></li>
+</ul>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = (x, d = 1) => x == null || !isFinite(x) ? '-' : (x >= 0 ? '+' : '') + (x * 100).toFixed(d) + '%';
+const pl = (x, d = 1) => x == null || !isFinite(x) ? '-' : (x * 100).toFixed(d) + '%';
+const col = x => x == null ? '' : x >= 0 ? 'pos' : 'neg';
+const money = n => n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : '$' + Math.round(n / 1e3) + 'K';
+const COLORS = ['#111', '#999', '#3366cc', '#cc6633', '#339966', '#9933cc'];
+
+const S = await fetch('/data/site.json').then(r => r.json());
+const BOOKS = Object.entries(S.books);
+const F = Object.keys(S.factors);
+$('#asof').textContent = `Prices to ${S.pricesTo}. Built ${new Date(S.builtAt).toLocaleString()}.`;
+
+// ---------- 1. Pelosi ----------
+function lineChart(series, { w = 760, h = 240 } = {}) {
+  const all = series.flatMap(s => s.points);
+  const t0 = Date.parse(all.reduce((a, p) => p[0] < a ? p[0] : a, all[0][0])), t1 = Date.parse(all.reduce((a, p) => p[0] > a ? p[0] : a, all[0][0]));
+  const ys = all.map(p => Math.log(p[1])), lo = Math.min(...ys), hi = Math.max(...ys);
+  const X = d => 40 + (Date.parse(d) - t0) / (t1 - t0) * (w - 50), Y = v => 10 + (hi - Math.log(v)) / (hi - lo) * (h - 30);
+  const ticks = [0.5, 1, 1.5, 2, 3, 4, 5].filter(v => Math.log(v) >= lo && Math.log(v) <= hi);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px">
+    ${ticks.map(v => `<line x1="40" x2="${w - 10}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee"/><text x="34" y="${Y(v) + 4}" text-anchor="end">${v}x</text>`).join('')}
+    ${series.map((s, i) => `<path d="${s.points.map((p, j) => `${j ? 'L' : 'M'}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('')}" fill="none" stroke="${COLORS[i]}" stroke-width="1.6"/>`).join('')}
+    <text x="40" y="${h - 4}">${series[0].points[0][0].slice(0, 7)}</text><text x="${w - 10}" y="${h - 4}" text-anchor="end">${S.pricesTo.slice(0, 7)}</text></svg>
+    <p class="legend small">${series.map((s, i) => `<span><i style="background:${COLORS[i]}"></i>${esc(s.name)}</span>`).join('')}</p>`;
+}
+{
+  const P = S.pelosi, perf = S.performance;
+  const keys = ['pelosi_trade_date', 'pelosi_copy', 'SPY', 'QQQ', 'NANC'].filter(k => perf[k]);
+  const rows = keys.map(k => { const s = perf[k].since || perf[k].all; return `<tr><td class="l">${esc(perf[k].name)}</td><td>${s.from}</td><td class="${col(s.total)}">${pct(s.total, 0)}</td><td>${pct(s.cagr)}</td><td>${pl(s.vol)}</td><td>${s.sharpe?.toFixed(2) ?? '-'}</td><td class="neg">${pl(s.maxDrawdown)}</td><td>${s.beta?.toFixed(2) ?? '-'}</td></tr>`; }).join('');
+  const lead = perf.pelosi_copy.since.total - perf.pelosi_trade_date.since.total;
+  $('#pelosi').innerHTML = `
+    <p>${P.filings} reports and ${P.transactions} transactions since 2019, ${P.used} of them in listed stocks or options on listed stocks. Reports were filed a median <b>${P.lagDays.median} days</b> after the trade (90% within ${P.lagDays.p90}, longest ${P.lagDays.max}). The law allows 45.</p>
+    ${lineChart(keys.map(k => ({ name: perf[k].name, points: perf[k].curve })))}
+    <table><thead><tr><th class="l">Since ${P.commonStart}</th><th>From</th><th>Total</th><th>A year</th><th>Volatility</th><th>Sharpe</th><th>Max drawdown</th><th>Beta to SPY</th></tr></thead><tbody>${rows}</tbody></table>
+    <p>Filling after the report instead of on the trade date changed the total return by <b class="${col(lead)}">${pct(lead, 0)}</b> over this period. Where the difference comes from, trade by trade:</p>
+    <table style="max-width:760px"><thead><tr><th class="l">Price move from her fill to the copier's fill</th><th>Trades</th><th>Median</th><th>Weighted by dollars</th><th>Share where price rose</th></tr></thead><tbody>${
+      [['Buys (positive = copier paid more)', P.lagEffect.buys], ['Sales (positive = copier sold higher)', P.lagEffect.sales]].map(([l, e]) => `<tr><td class="l">${l}</td><td>${e.n}</td><td>${pct(e.median)}</td><td>${pct(e.dollarWeighted)}</td><td>${pl(e.higher, 0)}</td></tr>`).join('')}</tbody></table>
+    <p>Copying costs money on the way in: the stock had usually already risen by the time the report came out. Her sales were usually followed by further gains, so the copier sold higher, but her largest sales were the exceptions. With one person's 116 trades, the gap between the two lines depends on a handful of large positions and should not be read as a rule. What is consistent is concentration: the copier's worst drawdown was ${(perf.pelosi_copy.since.maxDrawdown / perf.SPY.since.maxDrawdown).toFixed(1)} times the S&amp;P 500's.</p>
+    <h3>Latest filings</h3>
+    <table><thead><tr><th class="l">Filed</th><th class="l">Traded</th><th class="l">Days late</th><th class="l">Ticker</th><th class="l">Type</th><th>Amount</th><th class="l">Detail</th></tr></thead><tbody>${
+      P.recent.slice(0, 14).map(t => `<tr><td class="l">${t.filed}</td><td class="l">${t.traded}</td><td class="l">${Math.round((Date.parse(t.filed) - Date.parse(t.traded)) / 864e5)}</td><td class="l">${esc(t.ticker)}</td><td class="l">${t.type === 'P' ? 'Buy' : t.partial ? 'Partial sale' : 'Sale'}${t.kind === 'OP' ? ' (options)' : ''}</td><td>${money(t.amount_lo)} to ${money(t.amount_hi)}</td><td class="l small">${esc(t.detail)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- 2. AI portfolios ----------
+{
+  const ps = Object.entries(S.portfolios);
+  $('#ai').innerHTML = ps.map(([k, p]) => {
+    const perf = S.performance[k]?.all;
+    return `<h3>${esc(p.name)}</h3>
+      <p class="small">${esc(p.source)} ${p.snapshots > 1 ? `${p.snapshots} monthly picks so far.` : ''} ${perf ? `Return since ${perf.from}: <b class="${col(perf.total)}">${pct(perf.total)}</b>.` : `Tracking starts ${p.first}; no returns yet.`}</p>
+      <p class="small muted">${esc(p.note)}</p>
+      <table><thead><tr><th class="l">Ticker</th><th>Weight</th><th class="l">Reason given</th></tr></thead><tbody>${
+        p.holdings.map(h => `<tr><td class="l">${esc(h.ticker)}</td><td>${pl(h.weight, 0)}</td><td class="l small">${esc(h.reason || '')}</td></tr>`).join('')}</tbody></table>`;
+  }).join('') + `<p class="small">Autopilot's Claude, Grok, ChatGPT and DeepSeek portfolios, and its Inverse Cramer portfolio, can only be seen inside its app and on a password-protected fact-sheet site, so they are not tracked here. Holdings copied from the app can be added as dated files in <code>data/holdings/</code> and are tracked from that date.</p>`;
+}
+
+// ---------- 3. stress ----------
+const scen = BOOKS[0][1].stress.map(s => s.name);
+const cellVal = s => s.kind === 'historical' && s.coverage >= 0.999 ? s.replay : s.estimate;
+function renderStress() {
+  $('#stress').innerHTML = `<table><thead><tr><th class="l">Scenario</th><th class="l">Dates</th>${BOOKS.map(([, b]) => `<th>${esc(b.name)}</th>`).join('')}</tr></thead><tbody>${
+    scen.map((name, i) => {
+      const first = BOOKS[0][1].stress[i];
+      return `<tr class="click" data-i="${i}"><td class="l">${esc(name)}${first.kind === 'hypothetical' ? ' <span class="muted small">(hypothetical)</span>' : ''}</td><td class="l small">${first.from ? `${first.from} to ${first.to}` : ''}</td>${
+        BOOKS.map(([, b]) => { const s = b.stress[i], v = cellVal(s); return `<td class="${col(v)}">${pct(v)}${s.kind === 'historical' && s.coverage < 0.999 ? `<br><span class="muted small">${pl(s.coverage, 0)} had prices</span>` : ''}</td>`; }).join('')}</tr>`;
+    }).join('')}</tbody></table>`;
+}
+function stressDetail(i) {
+  const first = BOOKS[0][1].stress[i];
+  $('#stressDetail').innerHTML = `<div class="box"><b>${esc(first.name)}</b><p class="small">${esc(first.note)}</p>
+    <p class="small">Factor moves: ${F.map(f => `${S.factors[f]} ${first.factors[f] == null ? 'n/a' : pct(first.factors[f])}`).join(', ')}</p>
+    ${BOOKS.filter(([, b]) => Object.keys(b.weights).length > 1).map(([, b]) => { const s = b.stress[i]; return `<h3>${esc(b.name)}</h3><table><thead><tr><th class="l">Holding</th><th>Weight</th>${first.kind === 'historical' ? '<th>Actual</th>' : ''}<th>Factor model</th></tr></thead><tbody>${
+      s.holdings.map(h => `<tr><td class="l">${esc(h.ticker)}</td><td>${pl(h.weight)}</td>${first.kind === 'historical' ? `<td class="${col(h.actual)}">${h.actual == null ? '<span class="muted">not trading</span>' : pct(h.actual)}</td>` : ''}<td class="${col(h.estimate)}">${pct(h.estimate)}</td></tr>`).join('')}</tbody></table>`; }).join('')}</div>`;
+}
+renderStress();
+document.addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if (tr) { document.querySelectorAll('#stress tr').forEach(r => r.classList.toggle('sel', r === tr)); stressDetail(+tr.dataset.i); } });
+
+// editor
+const shock = Object.fromEntries(F.map(f => [f, 0]));
+function editor() {
+  $('#editor').innerHTML = `<table style="max-width:760px"><thead><tr>${F.map(f => `<th>${esc(S.factors[f])}</th>`).join('')}</tr></thead><tbody><tr>${
+    F.map(f => `<td><input class="shock" data-f="${f}" type="number" step="1" value="${Math.round(shock[f] * 100)}">%</td>`).join('')}</tr></tbody></table>
+    <table style="max-width:760px"><thead><tr><th class="l">Portfolio</th><th>Estimated move</th><th class="l">Biggest contributors</th></tr></thead><tbody>${
+      BOOKS.map(([, b]) => {
+        const contrib = Object.entries(b.weights).map(([k, w]) => { const be = S.betas[k]?.beta; return [k, be ? w * F.reduce((a, f) => a + be[f] * shock[f], 0) : 0]; });
+        const tot = contrib.reduce((a, [, v]) => a + v, 0);
+        const top = contrib.filter(([, v]) => Math.abs(v) > 1e-4).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3);
+        return `<tr><td class="l">${esc(b.name)}</td><td class="${col(tot)}"><b>${pct(tot)}</b></td><td class="l small">${top.map(([k, v]) => `${k} ${pct(v)}`).join(', ')}</td></tr>`;
+      }).join('')}</tbody></table>`;
+  document.querySelectorAll('input.shock').forEach(inp => inp.onchange = () => { shock[inp.dataset.f] = (+inp.value || 0) / 100; editor(); });
+}
+$('#presetRow').innerHTML = S.hypothetical.map((h, i) => `<button data-p="${i}">${esc(h.name)}</button>`).join('') + '<button data-p="-1">Clear</button>';
+$('#presetRow').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b) return; const i = +b.dataset.p; F.forEach(f => shock[f] = i < 0 ? 0 : S.hypothetical[i].shock[f]); document.querySelectorAll('#presetRow button').forEach(x => x.classList.toggle('on', x === b && i >= 0)); editor(); };
+editor();
+
+// ---------- 4. Monte Carlo ----------
+{
+  const row = (b, m) => `<tr><td class="l">${esc(b.name)}</td><td class="${col(m.p5)}">${pct(m.p5)}</td><td class="${col(m.p50)}">${pct(m.p50)}</td><td class="${col(m.p95)}">${pct(m.p95)}</td><td class="neg">${pct(m.expectedShortfall5)}</td><td>${pl(m.probLoss20)}</td><td class="neg">${pl(m.medianMaxDrawdown)}</td><td class="neg">${pl(m.badMaxDrawdown)}</td></tr>`;
+  const head = '<thead><tr><th class="l">Portfolio</th><th>Bad year (5th pct)</th><th>Median</th><th>Good year (95th)</th><th>Average of worst 5%</th><th>Chance of losing 20%+</th><th>Typical drawdown</th><th>Bad drawdown</th></tr></thead>';
+  $('#mc').innerHTML = `<h3>Zero drift</h3><table>${head}<tbody>${BOOKS.map(([, b]) => row(b, b.monteCarloZeroDrift)).join('')}</tbody></table>
+    <h3>Last three years' average return kept</h3><table>${head}<tbody>${BOOKS.map(([, b]) => row(b, b.monteCarlo)).join('')}</tbody></table>`;
+}
+
+// ---------- 5. betas ----------
+{
+  const wb = b => F.map(f => Object.entries(b.weights).reduce((a, [k, w]) => a + w * (S.betas[k]?.beta[f] ?? 0), 0));
+  $('#betas').innerHTML = `<p class="small">Weighted sensitivity of each portfolio to a 1% move in each factor, holding the others fixed.</p><table><thead><tr><th class="l">Portfolio</th>${F.map(f => `<th>${esc(S.factors[f])}</th>`).join('')}</tr></thead><tbody>${
+    BOOKS.map(([, b]) => `<tr><td class="l">${esc(b.name)}</td>${wb(b).map(v => `<td>${v.toFixed(2)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+</script>
+</body>
+</html>

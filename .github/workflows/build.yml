@@ -1,0 +1,25 @@
+name: build
+# Daily: refresh Pelosi's filings and prices, rerun simulations and stress tests, commit data/.
+on:
+  schedule:
+    - cron: '30 22 * * 1-5'   # after the US close
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get install -y -qq poppler-utils
+      - run: pip install -q -r requirements.txt
+      - run: python build/ptr.py && python build/build.py
+      - run: |
+          git config user.name "portfolio-stress builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || (git commit -q -m "Data $(date -u +%F)" && git push -q)
