@@ -62,7 +62,11 @@ const col = x => x == null ? '' : x >= 0 ? 'pos' : 'neg';
 const money = n => n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : '$' + Math.round(n / 1e3) + 'K';
 const COLORS = ['#111', '#999', '#3366cc', '#cc6633', '#339966', '#9933cc'];
 
-const S = await fetch('/data/site.json').then(r => r.json());
+// The daily job commits fresh data to the repo; the copy deployed with the page is the fallback.
+let S;
+for (const u of ['https://raw.githubusercontent.com/hpark236/portfolio-stress/main/data/site.json', '/data/site.json']) {
+  try { S = await fetch(u, { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.json(); }); break; } catch {}
+}
 const BOOKS = Object.entries(S.books);
 const F = Object.keys(S.factors);
 $('#asof').textContent = `Prices to ${S.pricesTo}. Built ${new Date(S.builtAt).toLocaleString()}.`;
