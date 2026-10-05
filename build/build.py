@@ -185,7 +185,7 @@ def factor_betas(px, assets, years=3):
         X = j.iloc[:, 1:].values
         mu, sd = X.mean(0), X.std(0)
         Z = (X - mu) / sd
-        lam = 0.05 * len(y)
+        lam = 0.005 * len(y)  # light: enough to stabilise SPY vs SMH without shrinking the market beta
         b = np.linalg.solve(Z.T @ Z + lam * np.eye(Z.shape[1]), Z.T @ (y - y.mean()))
         beta = b / sd
         resid = y - y.mean() - Z @ b
@@ -309,7 +309,11 @@ def main():
     for t in trades:
         if t.get("ticker"):
             t["ticker"] = RENAME.get(t["ticker"], t["ticker"])
-    usable = [t for t in trades if t.get("ticker") and t["ticker"] not in SKIP and t["kind"] in ("ST", "OP", None) and t["type"] in ("P", "S")]
+    # Gifts and donations are not sales a copier would mirror, and exercising options she already
+    # held adds no new exposure here because option purchases are already counted as stock.
+    not_trades = ("exercised", "contribution", "gift", "donat")
+    usable = [t for t in trades if t.get("ticker") and t["ticker"] not in SKIP and t["kind"] in ("ST", "OP", None) and t["type"] in ("P", "S")
+              and not t["detail"].lower().startswith(not_trades)]
     snaps = load_snapshots()
     snap_tickers = {h["ticker"] for v in snaps.values() for s in v for h in s["holdings"]}
     px = prices({t["ticker"] for t in usable} | set(BENCH) | set(FACTORS) | snap_tickers)

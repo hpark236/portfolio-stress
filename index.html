@@ -86,13 +86,13 @@ function lineChart(series, { w = 760, h = 240 } = {}) {
   const rows = keys.map(k => { const s = perf[k].since || perf[k].all; return `<tr><td class="l">${esc(perf[k].name)}</td><td>${s.from}</td><td class="${col(s.total)}">${pct(s.total, 0)}</td><td>${pct(s.cagr)}</td><td>${pl(s.vol)}</td><td>${s.sharpe?.toFixed(2) ?? '-'}</td><td class="neg">${pl(s.maxDrawdown)}</td><td>${s.beta?.toFixed(2) ?? '-'}</td></tr>`; }).join('');
   const lead = perf.pelosi_copy.since.total - perf.pelosi_trade_date.since.total;
   $('#pelosi').innerHTML = `
-    <p>${P.filings} reports and ${P.transactions} transactions since 2019, ${P.used} of them in listed stocks or options on listed stocks. Reports were filed a median <b>${P.lagDays.median} days</b> after the trade (90% within ${P.lagDays.p90}, longest ${P.lagDays.max}). The law allows 45.</p>
+    <p>${P.filings} reports and ${P.transactions} transactions since 2019. ${P.used} are buys or sales of listed stocks or options on them; option exercises and gifts to charity are left out. Reports were filed a median <b>${P.lagDays.median} days</b> after the trade (90% within ${P.lagDays.p90}, longest ${P.lagDays.max}). The law allows 45.</p>
     ${lineChart(keys.map(k => ({ name: perf[k].name, points: perf[k].curve })))}
     <table><thead><tr><th class="l">Since ${P.commonStart}</th><th>From</th><th>Total</th><th>A year</th><th>Volatility</th><th>Sharpe</th><th>Max drawdown</th><th>Beta to SPY</th></tr></thead><tbody>${rows}</tbody></table>
     <p>Filling after the report instead of on the trade date changed the total return by <b class="${col(lead)}">${pct(lead, 0)}</b> over this period. Where the difference comes from, trade by trade:</p>
     <table style="max-width:760px"><thead><tr><th class="l">Price move from her fill to the copier's fill</th><th>Trades</th><th>Median</th><th>Weighted by dollars</th><th>Share where price rose</th></tr></thead><tbody>${
       [['Buys (positive = copier paid more)', P.lagEffect.buys], ['Sales (positive = copier sold higher)', P.lagEffect.sales]].map(([l, e]) => `<tr><td class="l">${l}</td><td>${e.n}</td><td>${pct(e.median)}</td><td>${pct(e.dollarWeighted)}</td><td>${pl(e.higher, 0)}</td></tr>`).join('')}</tbody></table>
-    <p>Copying costs money on the way in: the stock had usually already risen by the time the report came out. Her sales were usually followed by further gains, so the copier sold higher, but her largest sales were the exceptions. With one person's 116 trades, the gap between the two lines depends on a handful of large positions and should not be read as a rule. What is consistent is concentration: the copier's worst drawdown was ${(perf.pelosi_copy.since.maxDrawdown / perf.SPY.since.maxDrawdown).toFixed(1)} times the S&amp;P 500's.</p>
+    <p>Copying costs money on the way in: the stock had already risen by the time the report came out in ${pl(P.lagEffect.buys.higher, 0)} of buys. Her sales were followed by further gains ${pl(P.lagEffect.sales.higher, 0)} of the time, so the copier usually sold higher, but weighted by dollars the sales effect is ${pct(P.lagEffect.sales.dollarWeighted)} because her largest sales went the other way. With one person's ${P.used} trades, the gap between the two lines depends on a handful of large positions and should not be read as a rule. What is consistent is concentration: the copier's worst drawdown was ${(perf.pelosi_copy.since.maxDrawdown / perf.SPY.since.maxDrawdown).toFixed(1)} times the S&amp;P 500's.</p>
     <h3>Latest filings</h3>
     <table><thead><tr><th class="l">Filed</th><th class="l">Traded</th><th class="l">Days late</th><th class="l">Ticker</th><th class="l">Type</th><th>Amount</th><th class="l">Detail</th></tr></thead><tbody>${
       P.recent.slice(0, 14).map(t => `<tr><td class="l">${t.filed}</td><td class="l">${t.traded}</td><td class="l">${Math.round((Date.parse(t.filed) - Date.parse(t.traded)) / 864e5)}</td><td class="l">${esc(t.ticker)}</td><td class="l">${t.type === 'P' ? 'Buy' : t.partial ? 'Partial sale' : 'Sale'}${t.kind === 'OP' ? ' (options)' : ''}</td><td>${money(t.amount_lo)} to ${money(t.amount_hi)}</td><td class="l small">${esc(t.detail)}</td></tr>`).join('')}</tbody></table>`;
@@ -113,13 +113,13 @@ function lineChart(series, { w = 760, h = 240 } = {}) {
 
 // ---------- 3. stress ----------
 const scen = BOOKS[0][1].stress.map(s => s.name);
-const cellVal = s => s.kind === 'historical' && s.coverage >= 0.999 ? s.replay : s.estimate;
+const cellVal = s => s.kind === 'historical' && s.coverage >= 0.995 ? s.replay : s.estimate;
 function renderStress() {
   $('#stress').innerHTML = `<table><thead><tr><th class="l">Scenario</th><th class="l">Dates</th>${BOOKS.map(([, b]) => `<th>${esc(b.name)}</th>`).join('')}</tr></thead><tbody>${
     scen.map((name, i) => {
       const first = BOOKS[0][1].stress[i];
       return `<tr class="click" data-i="${i}"><td class="l">${esc(name)}${first.kind === 'hypothetical' ? ' <span class="muted small">(hypothetical)</span>' : ''}</td><td class="l small">${first.from ? `${first.from} to ${first.to}` : ''}</td>${
-        BOOKS.map(([, b]) => { const s = b.stress[i], v = cellVal(s); return `<td class="${col(v)}">${pct(v)}${s.kind === 'historical' && s.coverage < 0.999 ? `<br><span class="muted small">${pl(s.coverage, 0)} had prices</span>` : ''}</td>`; }).join('')}</tr>`;
+        BOOKS.map(([, b]) => { const s = b.stress[i], v = cellVal(s); return `<td class="${col(v)}">${pct(v)}${s.kind === 'historical' && s.coverage < 0.995 ? `<br><span class="muted small">${pl(s.coverage, 0)} had prices</span>` : ''}</td>`; }).join('')}</tr>`;
     }).join('')}</tbody></table>`;
 }
 function stressDetail(i) {
