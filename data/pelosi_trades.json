@@ -2327,5 +2327,22 @@
   "shares": null,
   "options": false,
   "detail": "Additional investment in llc which is acquiring and restoring a luxury hotel property in san francisco, ca."
+ },
+ {
+  "doc": "20035553",
+  "filed": "2026-10-02",
+  "owner": "SP",
+  "asset": "REOF XXX, LLC",
+  "ticker": null,
+  "kind": "AB",
+  "type": "P",
+  "partial": false,
+  "traded": "2026-09-08",
+  "notified": "2026-09-08",
+  "amount_lo": 500001,
+  "amount_hi": 1000000,
+  "shares": null,
+  "options": false,
+  "detail": "Investment in llc which is acquiring and managing a commercial office property at 225 bush street in san"
  }
 ]
