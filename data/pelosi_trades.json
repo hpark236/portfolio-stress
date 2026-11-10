@@ -2344,5 +2344,22 @@
   "shares": null,
   "options": false,
   "detail": "Investment in llc which is acquiring and managing a commercial office property at 225 bush street in san"
+ },
+ {
+  "doc": "20035780",
+  "filed": "2026-11-06",
+  "owner": "SP",
+  "asset": "WARNER BROS. DISCOVERY, INC. - SERIES A COMMON STOCK (WBD)",
+  "ticker": "WBD",
+  "kind": "ST",
+  "type": "S",
+  "partial": false,
+  "traded": "2026-10-07",
+  "notified": "2026-10-07",
+  "amount_lo": 50001,
+  "amount_hi": 100000,
+  "shares": null,
+  "options": false,
+  "detail": "Cash proceeds from warner bros discovery merger with paramount skydance."
  }
 ]
